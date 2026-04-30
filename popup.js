@@ -3,16 +3,24 @@ async function updatePrice() {
   priceElement.textContent = 'Loading...';
   
   try {
-    // Request price from background service worker
-    const response = await chrome.runtime.sendMessage({ action: 'getPrice' });
-    if (response.success) {
+    // Request price from background service worker with timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), 5000)
+    );
+    
+    const response = await Promise.race([
+      chrome.runtime.sendMessage({ action: 'getPrice' }),
+      timeoutPromise
+    ]);
+    
+    if (response && response.success) {
       priceElement.textContent = `Current Price: $${response.price}`;
     } else {
-      priceElement.textContent = `Error: ${response.error}`;
+      priceElement.textContent = `Error: ${response?.error || 'Unknown error'}`;
     }
   } catch (error) {
-    priceElement.textContent = 'Error loading price';
-    console.error('Error:', error);
+    priceElement.textContent = `Error: ${error.message}`;
+    console.error('Popup error:', error);
   }
 }
 
