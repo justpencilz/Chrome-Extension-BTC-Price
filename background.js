@@ -2,31 +2,54 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Background: Received message', request);
   
   if (request.action === 'getPrice') {
-    console.log('Background: Fetching from CoinDesk...');
+    console.log('Background: Fetching Bitcoin price...');
     
-    fetch('https://api.coindesk.com/v1/bpi/currentprice.json')
-      .then(response => {
-        console.log('Background: Response status', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Background: Data received', data);
-        if (data && data.bpi && data.bpi.USD && data.bpi.USD.rate) {
-          const price = data.bpi.USD.rate;
+    // Try multiple APIs in case one fails
+    const apis = [
+      'https://api.coindesk.com/v1/bpi/currentprice.json',
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
+    ];
+    
+    async function tryFetch() {
+      for (let url of apis) {
+        try {
+          console.log(`Background: Trying ${url}`);
+          const response = await fetch(url);
+          
+          if (!response.ok) {
+            console.log(`Background: ${url} returned ${response.status}`);
+            continue;
+          }
+          
+          const data = await response.json();
+          console.log('Background: Data received', data);
+          
+          let price;
+          if (data.bpi && data.bpi.USD) {
+            // CoinDesk format
+            price = data.bpi.USD.rate;
+          } else if (data.bitcoin && data.bitcoin.usd) {
+            // CoinGecko format
+            price = data.bitcoin.usd;
+          } else {
+            continue;
+          }
+          
           console.log('Background: Price found:', price);
           sendResponse({ success: true, price: price });
-        } else {
-          throw new Error('Invalid response structure');
+          return;
+        } catch (error) {
+          console.log(`Background: ${url} failed:`, error.message);
+          continue;
         }
-      })
-      .catch(error => {
-        console.error('Background: Fetch error:', error.message);
-        sendResponse({ success: false, error: error.message });
-      });
+      }
+      
+      // All APIs failed
+      console.error('Background: All APIs failed');
+      sendResponse({ success: false, error: 'Unable to fetch Bitcoin price' });
+    }
     
+    tryFetch();
     return true; // Keep channel open for async response
   }
 });
