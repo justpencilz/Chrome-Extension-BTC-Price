@@ -4,6 +4,9 @@
     "version": "1.0",
     "description": "Track the current Bitcoin price",
     "permissions": ["storage", "alarms"],
+    "host_permissions": [
+      "https://api.coindesk.com/*"
+    ],
     "action": {
       "default_popup": "popup.html",
       "default_icon": {
@@ -21,4 +24,3 @@
       "128": "images/bitcoin-128.png"
     }
   }
-  
