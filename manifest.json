@@ -5,7 +5,8 @@
     "description": "Track the current Bitcoin price",
     "permissions": ["storage", "alarms"],
     "host_permissions": [
-      "https://api.coindesk.com/*"
+      "https://api.coindesk.com/*",
+      "https://api.coingecko.com/*"
     ],
     "action": {
       "default_popup": "popup.html",
